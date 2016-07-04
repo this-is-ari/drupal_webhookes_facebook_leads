@@ -1,0 +1,137 @@
+<?php
+
+/**
+ * @file
+ * Creates a GitHub web hook endpoint.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function fbleads_webhook_menu() {
+  $items = array();
+
+  $webhook_url = variable_get('fbleads_webhook_url', 'fbleads/webhook/%fbleads_webhook_token');
+  $items[$webhook_url] = array(
+    'title' => 'FBleads WebHook Endpoint',
+    'page callback' => 'fbleads_webhook_endpoint',
+		//'page arguments' => json_decode(file_get_contents('php://input'), true),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'fbleads_webhook.pages.inc',
+    'delivery callback' => 'fbleads_webhook_json_deliver',
+  );
+
+  // Add dynamic arguments to page and access callbacks.
+  $arguments = array();
+  $url_parts = explode('/', $webhook_url);
+  foreach ($url_parts as $position => $part) {
+    if (0 === strpos($part, '%')) {
+      $arguments[] = $position;
+    }
+  }
+
+  $items[$webhook_url]['access arguments'] = $arguments;
+  $items[$webhook_url]['page arguments'] = $arguments;
+
+  $items['admin/config/services/fbleads-webhook'] = array(
+    'title' => 'fbleads WebHook',
+    'description' => 'Configure the fbleads WebHook that responds to events.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fbleads_webhook_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'fbleads_webhook.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Returns the parsed payload.
+ *
+ * @return array|FALSE
+ *
+ * @see https://help.github.com/articles/post-receive-hooks
+ */
+function fbleads_webhook_payload() {
+  $payload = &drupal_static(__FUNCTION__);
+  if (NULL === $payload) {
+    $payload = (isset($_POST['payload'])) ? drupal_json_decode($_POST['payload']) : array();
+  }
+  return $payload;
+}
+
+/**
+ * Wildcard loader for the token.
+ *
+ * This looks silly, but it is backwards compatible with older versions that
+ * performed validation here and also allows us to use a wildcard replacement
+ * in the path which makes the setting more transparent.
+ */
+function fbleads_webhook_token_load($token) {
+  return $token;
+}
+
+/**
+ * Returns a the security token used to anthenticate the webhook requests. A
+ * random token is generated if one isn't set exist.
+ *
+ * @return string
+ */
+function fbleads_webhook_token() {
+  if (!$token = variable_get('fbleads_webhook_token', '')) {
+    $token = substr(drupal_hash_base64(drupal_random_bytes(24)), 0, 24);
+    variable_set('fbleads_webhook_token', $token);
+  }
+  return $token;
+}
+
+/**
+ * Access callback; Invokes hook_fbleads_webhook_access() to perform custom
+ * access checks. There is no security by default.
+ *
+ * @return bool
+ */
+function fbleads_webhook_access() {
+  $payload = fbleads_webhook_payload();
+  $args = func_get_args();
+  $event = isset($_SERVER['HTTP_X_GITHUB_EVENT']) ? $_SERVER['HTTP_X_GITHUB_EVENT'] : FALSE;
+
+  $access = module_invoke_all('fbleads_webhook_access', $payload, $args, $event);
+  if (in_array(FALSE, $access, TRUE)) {
+    return FALSE;
+  }
+  elseif (in_array(TRUE, $access, TRUE)) {
+    return TRUE;
+  }
+  elseif (variable_get('fbleads_webhook_require_token', 1)) {
+    $position = variable_get('fbleads_webhook_token_position', 0);
+    $token = isset($args[$position]) ? $args[$position] : FALSE;
+    return (fbleads_webhook_token() == $token);
+  }
+  else {
+    return TRUE;
+  }
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function fbleads_webhook_entity_info() {
+
+  $info = array();
+
+  $info['fblead'] = array(
+    'label' => t('Facebook lead'),
+    'base table' => 'fbleads_webhook_leads',
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'name',
+    ),
+		'entity class' => 'Entity',
+		'controller class' => 'EntityAPIController',		
+    'module' => 'fbleads_webhook',
+  );
+
+  return $info;
+}

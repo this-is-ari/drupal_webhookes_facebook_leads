@@ -1,0 +1,7 @@
+name = FBleads WebHook Endpoint
+description = Creates a Facebook leads webhook endpoint and invokes a hook when an event is received.
+package = Other
+core = 7.x
+configure = admin/config/services/fbleads-webhook
+
+

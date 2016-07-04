@@ -1,0 +1,70 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the FBleads WebHook module.
+ */
+
+ /**
+ * Implements hook_schema().
+ */
+function fbleads_webhook_schema() {
+
+  $schema = array();
+
+  $schema['fbleads_webhook_leads'] = array(
+    'description' => 'The base table for the lead entity',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key of the lead entity',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'leadgen_id' => array(
+        'description' => 'Lead id.',
+        'type' => 'text',
+      ),
+      'ad_id' => array(
+        'description' => 'Ad id.',
+        'type' => 'text',
+      ),
+      'form_id' => array(
+        'description' => 'Form id.',
+        'type' => 'text',
+      ),
+      'created_time' => array(
+        'description' => 'Lead creation time.',
+        'type' => 'text',
+      ),
+      'page_id' => array(
+        'description' => 'Page id.',
+        'type' => 'text',
+      ),		
+      'adgroup_id' => array(
+        'description' => 'Adgroup id.',
+        'type' => 'text',
+      ),			
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_enable().
+ */
+function fbleads_webhook_enable() {
+	variable_set('fbleads_webhook_url', 'fbleads/webhook');
+}
+/**
+ * Implements hook_uninstall().
+ */
+function fbleads_webhook_uninstall() {
+  variable_del('fbleads_webhook_url');
+  variable_del('fbleads_webhook_require_token');
+  variable_del('fbleads_webhook_token');
+  variable_del('fbleads_webhook_token_position');
+}
+
