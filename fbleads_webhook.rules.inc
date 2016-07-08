@@ -74,6 +74,24 @@ function fbleads_webhook_rules_event_info() {
 				),				
       )
     ),
+    'fbleads_webhook_leaddata_received' => array(
+      'label' => t('FBlead webhook: Lead data obtained'),
+      'group' => t('FB Leads webhook'),
+      'variables' => array(
+        'leadgen_id' => array(
+          'label' => t('Leadgen id'),
+          'type' => 'text',
+        ),
+				'lead_email' => array(
+					'type' => 'text',
+					'label' => t('FB lead user email'),
+				),
+				'lead_username' => array(
+					'type' => 'text',
+					'label' => t('FB lead user name'),		
+				),
+      )
+    ),		
   );
 }
 
@@ -140,8 +158,7 @@ function fbleads_webhook_write_leadgen($leadgen_id, $ad_id, $form_id, $created_t
 
 	return array (
 		'entity_id' => $lead->id,
-	);		 
-  
+	);		   
 }
 
 
